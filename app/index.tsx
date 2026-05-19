@@ -10,7 +10,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   // ⚠️ IMPORTANT: Replace this with your actual Render URL later
-  const PRODUCTION_URL = "https://YOUR-APP-NAME.onrender.com";
+  const PRODUCTION_URL = "https://dreams-api-jgmt.onrender.com";
 
   useEffect(() => {
     // Auto-login if session exists

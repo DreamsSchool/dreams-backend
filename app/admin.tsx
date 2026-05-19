@@ -9,7 +9,7 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(false);
 
   // TARGET BACKEND: Swap this with your Render URL
-  const PRODUCTION_URL = "https://YOUR-RENDER-APP-NAME.onrender.com";
+  const PRODUCTION_URL = "https://dreams-api-jgmt.onrender.com";
 
   // --- BROADCAST STATE ---
   const [title, setTitle] = useState('');

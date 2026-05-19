@@ -10,7 +10,7 @@ export default function InboxScreen() {
   const [userContext, setUserContext] = useState({ role: '', className: '' });
 
   // ⚠️ IMPORTANT: Replace this with your actual Render URL later
-  const PRODUCTION_URL = "https://YOUR-APP-NAME.onrender.com";
+  const PRODUCTION_URL = "https://dreams-api-jgmt.onrender.com";
 
   useEffect(() => {
     const fetchMessages = async () => {
