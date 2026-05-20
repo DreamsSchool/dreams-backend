@@ -1,40 +1,36 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const PRODUCTION_URL = "https://your-new-koyeb-link.koyeb.app"; // <-- PUT YOUR KOYEB URL HERE!
 
 export default function InboxScreen() {
   const router = useRouter();
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userContext, setUserContext] = useState({ role: '', className: '' });
-
-  // ⚠️ IMPORTANT: Replace this with your actual Render URL later
-  const PRODUCTION_URL = "https://dreams-api-jgmt.onrender.com";
+  const [parentClass, setParentClass] = useState("");
 
   useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const role = await AsyncStorage.getItem('role') || '';
-        const className = await AsyncStorage.getItem('class_name') || '';
-        setUserContext({ role, className });
-
-        const res = await fetch(`${PRODUCTION_URL}/messages/${role}/${className}`);
-        const data = await res.json();
-        setMessages(data);
-      } catch (error) {
-        console.error("Failed to load messages");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchMessages();
   }, []);
 
-  const getHeaderText = () => {
-    if (userContext.role === 'teacher') return "Staff Notices";
-    if (userContext.role === 'parent') return `Class ${userContext.className} Notices`;
-    return "Notices";
+  const fetchMessages = async () => {
+    try {
+      // 1. Find out which class this parent belongs to
+      const userClass = await AsyncStorage.getItem('user_class');
+      setParentClass(userClass || "Unknown");
+
+      // 2. Ask the Koyeb backend for notices specifically for this class
+      const response = await fetch(`${PRODUCTION_URL}/messages?class_name=${userClass}`);
+      const data = await response.json();
+      
+      setMessages(data.messages || []);
+    } catch (error) {
+      console.error("Failed to load messages:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -44,39 +40,30 @@ export default function InboxScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.brandTitle}>Dream's</Text>
-          <Text style={styles.subTitle}>{getHeaderText()}</Text>
-        </View>
-        <TouchableOpacity onPress={handleLogout}>
-          <Text style={styles.logout}>Logout</Text>
+        <Text style={styles.headerTitle}>Class {parentClass} Notices</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Message List */}
       {loading ? (
-        <ActivityIndicator size="large" color="#eab308" style={{ marginTop: 50 }} />
+        <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 50 }} />
+      ) : messages.length === 0 ? (
+        <Text style={styles.emptyText}>No new notices for Class {parentClass} right now. 🎉</Text>
       ) : (
         <FlatList
           data={messages}
           keyExtractor={(item, index) => index.toString()}
-          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: 20 }}
           renderItem={({ item }) => (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.msgTitle}>{item.title}</Text>
-              </View>
-              <Text style={styles.msgBody}>{item.body}</Text>
-              <Text style={styles.msgTime}>{item.timestamp}</Text>
+            <View style={styles.messageCard}>
+              <Text style={styles.messageText}>{item.message}</Text>
+              <Text style={styles.dateText}>Sent: {new Date(item.created_at).toLocaleDateString()}</Text>
             </View>
           )}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📭</Text>
-              <Text style={styles.emptyText}>You're all caught up!</Text>
-              <Text style={styles.emptySub}>No new notices from the school.</Text>
-            </View>
-          }
         />
       )}
     </View>
@@ -84,28 +71,31 @@ export default function InboxScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f4f4f5', padding: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 40, marginBottom: 25 },
-  brandTitle: { fontSize: 26, fontWeight: '900', color: '#1f2937' },
-  subTitle: { fontSize: 14, color: '#eab308', fontWeight: 'bold', marginTop: -2 },
-  logout: { color: '#ef4444', fontWeight: 'bold', padding: 10, backgroundColor: '#fee2e2', borderRadius: 8, overflow: 'hidden' },
-  
-  card: { 
-    backgroundColor: 'white', 
+  container: { flex: 1, backgroundColor: '#F5F7FA' },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    backgroundColor: '#fff', 
     padding: 20, 
-    borderRadius: 12, 
-    marginBottom: 15, 
-    borderLeftWidth: 6, 
-    borderLeftColor: '#eab308', 
-    elevation: 2 
+    paddingTop: 50, // pushes header below phone notch
+    borderBottomWidth: 1, 
+    borderColor: '#ddd' 
   },
-  cardHeader: { borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingBottom: 10, marginBottom: 10 },
-  msgTitle: { fontSize: 18, fontWeight: 'bold', color: '#1f2937' },
-  msgBody: { fontSize: 15, color: '#4b5563', lineHeight: 22, marginBottom: 15 },
-  msgTime: { fontSize: 12, color: '#9ca3af', textAlign: 'right', fontWeight: '500' },
-  
-  emptyContainer: { alignItems: 'center', marginTop: 80 },
-  emptyIcon: { fontSize: 40, marginBottom: 10 },
-  emptyText: { fontSize: 18, fontWeight: 'bold', color: '#1f2937' },
-  emptySub: { color: '#6b7280', marginTop: 5 }
+  headerTitle: { fontSize: 20, fontWeight: 'bold' },
+  logoutBtn: { backgroundColor: '#FF4C4C', padding: 8, borderRadius: 5 },
+  logoutText: { color: '#fff', fontWeight: 'bold' },
+  messageCard: { 
+    backgroundColor: '#fff', 
+    padding: 15, 
+    borderRadius: 10, 
+    marginBottom: 15, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.1, 
+    elevation: 3 
+  },
+  messageText: { fontSize: 16, color: '#333' },
+  dateText: { fontSize: 12, color: '#888', marginTop: 10, textAlign: 'right' },
+  emptyText: { textAlign: 'center', marginTop: 50, fontSize: 16, color: '#666' }
 });
